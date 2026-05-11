@@ -17,6 +17,7 @@
   - [`rolling_windows/`](pandas/rolling_windows/) — 滚动窗口
 - **lightgbm/**
   - [`train_function_template/`](lightgbm/train_function_template/) — 训练/预测函数模板,参数字典抽离
+  - [`quant_pipeline_basics/`](lightgbm/quant_pipeline_basics/) — 量化最小可跑流水线 (qlib 简化版):打标签 / 写特征 / 训练 + IC 评估
 - **logging/**
   - [`loguru_basics/`](logging/loguru_basics/) — loguru 入门
 - **git/**
