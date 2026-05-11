@@ -12,7 +12,7 @@ LGBModel 简化而来。 一共三步:
 为什么这样写、谁在用 (Alpha158 / LGBModel 长什么样), 看 notes.md / sources.md 。
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import lightgbm as lgb
 import numpy as np
@@ -69,7 +69,8 @@ def _roll(s: pd.Series, window: int, func: str) -> pd.Series:
 
 def _pct_change(s: pd.Series, window: int) -> pd.Series:
     """按 instrument 分组算 N 期收益率。"""
-    return s.groupby(level="instrument").transform(lambda x: x.pct_change(window))
+    # groupby.pct_change 是内置优化版, 比 transform(lambda x: x.pct_change()) 快很多
+    return s.groupby(level="instrument").pct_change(window)
 
 
 def make_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -116,9 +117,9 @@ DEFAULT_PARAMS: Dict[str, Any] = {
 def train_lgb(
     X_train: pd.DataFrame,
     y_train: pd.Series,
-    X_valid: pd.DataFrame = None,
-    y_valid: pd.Series = None,
-    params: Dict[str, Any] = None,
+    X_valid: Optional[pd.DataFrame] = None,
+    y_valid: Optional[pd.Series] = None,
+    params: Optional[Dict[str, Any]] = None,
     num_boost_round: int = 200,
     early_stopping_rounds: int = 20,
 ) -> lgb.Booster:
@@ -126,7 +127,9 @@ def train_lgb(
     训练: 传进来的 (X, y) 必须已经按时间切好, 不要在这里做随机切分,
     否则会发生未来信息泄漏 (量化里这是最常见的 bug) 。
     """
-    params = params or DEFAULT_PARAMS
+    # 合并而不是替换: 用户只想覆盖个别参数 (比如 learning_rate) 时,
+    # 其余默认值要保留, 否则会把 objective / num_leaves 都丢掉。
+    params = {**DEFAULT_PARAMS, **(params or {})}
     train_set = lgb.Dataset(X_train, label=y_train)
     valid_sets = [train_set]
     callbacks = [lgb.log_evaluation(period=50)]
