@@ -11,4 +11,14 @@
 
 ## 索引
 
-(还没有内容,慢慢加)
+- **duckdb/**
+  - [`wide_to_long/`](duckdb/wide_to_long/) — 宽表 ↔ 长表 (UNPIVOT / melt) 与 qlib 风格 MultiIndex
+- **pandas/**
+  - [`rolling_windows/`](pandas/rolling_windows/) — 滚动窗口
+- **lightgbm/**
+  - [`train_function_template/`](lightgbm/train_function_template/) — 训练/预测函数模板,参数字典抽离
+- **logging/**
+  - [`loguru_basics/`](logging/loguru_basics/) — loguru 入门
+- **git/**
+  - [`connect_my_git/`](git/connect_my_git/) — 账号 / 命令配置
+  - [`manage_code/`](git/manage_code/) — `.gitignore` 等
