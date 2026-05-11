@@ -88,6 +88,15 @@ pandas 等价物: `melt` ↔ `pivot` / `pivot_table` ;
 
 - `UNPIVOT` 必须排除掉 id 列, 否则 date 也会被融进去
   → `ON COLUMNS(* EXCLUDE (date))`
+- `* EXCLUDE` 只能保留**一个** id 列, 剩下全融。 如果宽表里同时有
+  `AAPL_close / AAPL_volume / MSFT_close / MSFT_volume` 这种多 feature
+  列, 会被混到同一列 value 里, 信息丢光 ——
+  这种情况要么先按 feature 分两张宽表分别 UNPIVOT 再 join,
+  要么显式 `UNPIVOT ... ON ("AAPL", "MSFT", ...)` 列出来。
+- SQL 拼字符串要给标识符加双引号 ( `"$close"` ) , 否则 qlib 那种
+  带 `$` / 大小写敏感的列名会语法报错; 同时也降低注入风险。
+- `PIVOT ... USING first(...)` 默认掩盖重复行 —— 调试数据质量时换成
+  `count(*)` 或先 `GROUP BY ... HAVING count(*) > 1` 校验。
 - 转 MultiIndex 后**一定**要 `sort_index()` , 不然 `.loc[(date, ins)]` 会触发
   `PerformanceWarning: indexing past lexsort depth may impact performance` ,
   而且切片速度差几个数量级

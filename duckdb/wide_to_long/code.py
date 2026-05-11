@@ -24,13 +24,19 @@ def wide_to_long_sql(
 
     宽表 (table):  date | AAPL | MSFT | GOOG | ...
     长表 (返回):   date | instrument | value
+
+    注意: 这里 ON COLUMNS(* EXCLUDE (id_col)) 会把**除 id_col 外**的所有列
+    都融成一列 value 。 如果表里同时有多个 feature (close 和 volume) ,
+    它们会被混到一起 —— 这种情况要么先按 feature 拆表分别 UNPIVOT,
+    要么显式列出要融的列。
+    标识符加了双引号, 这样列名带 $ / 空格 / 大小写敏感时也能用 (qlib 的 $close 就是)。
     """
     sql = f"""
     UNPIVOT {table}
-    ON COLUMNS(* EXCLUDE ({id_col}))
+    ON COLUMNS(* EXCLUDE ("{id_col}"))
     INTO
-        NAME {name_col}
-        VALUE {value_name}
+        NAME "{name_col}"
+        VALUE "{value_name}"
     """
     return con.execute(sql).fetchdf()
 
@@ -79,13 +85,20 @@ def long_to_wide_sql(
     id_col: str = "date",
     name_col: str = "instrument",
     value_col: str = "value",
+    agg: str = "first",
 ) -> pd.DataFrame:
-    """DuckDB PIVOT, 长表回宽表。"""
+    """
+    DuckDB PIVOT, 长表回宽表。
+
+    agg: 聚合函数名 (first / sum / mean / max ...) 。 默认 first,
+         如果 (id_col, name_col) 不该有重复, 用 first 会把脏数据藏起来,
+         调试时可以换成 sum/mean 或先 GROUP BY 校验唯一性。
+    """
     sql = f"""
     PIVOT {table}
-    ON {name_col}
-    USING first({value_col})
-    GROUP BY {id_col}
+    ON "{name_col}"
+    USING {agg}("{value_col}")
+    GROUP BY "{id_col}"
     """
     return con.execute(sql).fetchdf()
 
