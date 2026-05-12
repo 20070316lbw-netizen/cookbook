@@ -28,6 +28,9 @@ class SimpleLedger:
         self.cash: float = starting_cash
         self.positions: Dict[str, float] = {}  # asset -> shares
         self.portfolio_value: float = starting_cash
+        # 最新价缓存: 停牌 / 数据缺失时沿用上一次见过的价。
+        # 对应 zipline 里 Position.last_sale_price (只在有新价时更新) 。
+        self._last_prices: Dict[str, float] = {}
 
     # ------------------------------------------------------------------
     # 1) mark-to-market: 拿新价估值, 算这一 bar 的 return
@@ -37,10 +40,13 @@ class SimpleLedger:
     # ------------------------------------------------------------------
     def mark_to_market(self, prices: pd.Series) -> float:
         start_value = self.portfolio_value
+        # 先把今天能看到的价灌进缓存; 没看到的资产 (停牌) 沿用历史价,
+        # 否则 positions_value 会瞬间塌成 0, 当天 return 假跌一大段。
+        for asset, p in prices.dropna().items():
+            self._last_prices[asset] = p
         positions_value = sum(
-            shares * prices[asset]
+            shares * self._last_prices.get(asset, 0.0)
             for asset, shares in self.positions.items()
-            if asset in prices.index and not np.isnan(prices[asset])
         )
         self.portfolio_value = self.cash + positions_value
         if start_value == 0:
@@ -72,8 +78,11 @@ class SimpleLedger:
             else:
                 self.positions[asset] = new_shares
         # 重新估值: rebalance 本身不改总价值 (零滑点零手续费的恒等式),
-        # 但写一次更稳, 也方便后面加摩擦项。
-        positions_value = sum(s * live[a] for a, s in self.positions.items() if a in live.index)
+        # 但写一次更稳, 也方便后面加摩擦项。 用 _last_prices 而不是 live,
+        # 这样停牌资产的持仓也按上次价计入, 跟 mark_to_market 保持一致。
+        positions_value = sum(
+            s * self._last_prices.get(a, 0.0) for a, s in self.positions.items()
+        )
         self.portfolio_value = self.cash + positions_value
 
 

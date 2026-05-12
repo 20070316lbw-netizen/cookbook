@@ -22,6 +22,9 @@ ANN_FACTOR = 252
 # =====================================================================
 # empyrical: ending = nanprod(returns + 1); (ending ** (1 / num_years)) - 1
 # 用「累计 net wealth」开 1/年数次方再减 1, 也就是 CAGR。
+# 隐含假设: ending > 0 (策略没爆仓到负净值) 。 ending <= 0 时 numpy 会
+# 返回 nan + RuntimeWarning, 跟 empyrical 行为一致, 此时业绩本身也已经
+# 失去意义, 不在这份简化版的处理范围内。
 def annual_return(returns: pd.Series) -> float:
     returns = returns.dropna()
     if len(returns) == 0:
