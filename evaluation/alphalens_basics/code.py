@@ -94,8 +94,7 @@ def factor_ic(factor: pd.Series, forward_returns: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame, index=date, columns=各个 horizon ("1D"/"5D"/...) 的 IC
     """
-    aligned = pd.concat({"factor": factor, **{c: forward_returns[c] for c in forward_returns.columns}}, axis=1)
-    aligned = aligned.dropna()
+    aligned = pd.concat([factor.rename("factor"), forward_returns], axis=1).dropna()
 
     def _ic(group: pd.DataFrame) -> pd.Series:
         f_rank = group["factor"].rank()

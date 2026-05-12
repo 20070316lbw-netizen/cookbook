@@ -67,9 +67,13 @@ def sample_reweight(
     Returns:
         (N,) Series, 给 lgb.Dataset 的 weight=
     """
-    # 按横向排名归一化, 让两个 h 在 [0,1] 上同尺度
+    # 按横向排名归一化, 让两个 h 在 [0,1] 上同尺度。
+    # 注意: 这里用 loss_values.rank(pct=True) 而不是 qlib 当前版本里的
+    # (-loss_values).rank(pct=True) 。 后者会让"高 loss 样本拿到 LOW h1 →
+    # 拿到 LARGE weight", 即对难/噪声样本反而加权, 跟论文 Section 4 描述的
+    # "downweight noisy samples" 是相反的。 详见 notes.md "qlib 实现的一处反号" 。
     loss_curve_norm = loss_curve.rank(axis=0, pct=True)
-    loss_values_norm = (-loss_values).rank(pct=True)
+    loss_values_norm = loss_values.rank(pct=True)
 
     # h2 用 "前 10% 棵树的平均 loss" 当 l_start, "后 10% 棵树的平均 loss" 当 l_end
     N, T = loss_curve.shape
@@ -167,8 +171,9 @@ def retrieve_loss_curve(model: lgb.Booster, X: pd.DataFrame, y: np.ndarray) -> p
     N = X.shape[0]
     curve = np.zeros((N, num_trees))
     pred_cum = np.zeros(N)
+    X_values = X.values  # 提到循环外, num_trees 通常上百, 避免每棵都过一次 .values
     for t in range(num_trees):
-        pred_cum += model.predict(X.values, start_iteration=t, num_iteration=1)
+        pred_cum += model.predict(X_values, start_iteration=t, num_iteration=1)
         curve[:, t] = (y - pred_cum) ** 2
     return pd.DataFrame(curve)
 

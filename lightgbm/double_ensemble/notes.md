@@ -19,8 +19,8 @@ DoubleEnsemble 的做法是 **训 K 个 sub-model , 每训完一个就根据"学
 
 ```
 h_value = α1 * h1 + α2 * h2
-    h1 = rank(-当前 ensemble loss)        # 当前还学不会的, 排名靠前
-    h2 = rank(l_end / l_start)            # 训练过程中 loss 没怎么降 (>=1 甚至升)
+    h1 = rank(当前 ensemble loss)         # 当前 loss 大 → h1 大 → 降权
+    h2 = rank(l_end / l_start)            # 训练过程中 loss 没怎么降 (>=1 甚至升) → h2 大 → 降权
 ```
 
 - `h1` 大: 当前模型在这个样本上 loss 大, 是个难样本。
@@ -33,6 +33,20 @@ weights[bin] = 1 / (decay^k * h_avg + 0.1)
 ```
 
 `decay < 1`, k 越往后整体权重越平 , 防止后期把权重压得过于极端。
+
+### qlib 实现的一处反号
+
+qlib `qlib/contrib/model/double_ensemble.py` 里 h1 写的是
+`loss_values_norm = (-loss_values).rank(pct=True)` , 加了负号。 加了负号之后,
+**高 loss 样本拿到 LOW h1**, 由于最终权重是 `1 / (decay^k * h_avg + 0.1)`,
+等于给难/噪声样本反而加大了权重 (AdaBoost 风格的"focus on hard")。 但论文
+Section 4 明说是要 **降低噪声样本权重** , 跟 qlib 的实际效果方向相反。
+
+这一篇 code.py 按论文意图实现 (无负号) , 跟 qlib 当前版本不一致。 想看 qlib
+原貌的话: 把 `loss_values.rank(pct=True)` 换回 `(-loss_values).rank(pct=True)`
+就行。 我没在原仓库 issue 里找到这个分歧的讨论, 可能确实是 qlib 一处长存
+的 sign error, 也可能我对论文 Algorithm 2 的解读有偏差。 用的时候建议两版
+都跑一下回测对比。
 
 ### 一个常被踩的坑
 
