@@ -9,6 +9,10 @@
 - `notes.md` — 输入输出、关键细节、坑
 - `sources.md` — 出处和参考链接
 
+例外:`pitfalls/` 收录自己实际踩过的坑,每个子文件夹是两件套:
+- `problem.md` — 坑长什么样、为什么会炸、怎么解、教训
+- `fix.py` — 错误写法 vs 正确写法,可直接运行对照
+
 ## 索引
 
 - **duckdb/**
@@ -30,3 +34,9 @@
 - **git/**
   - [`connect_my_git/`](git/connect_my_git/) — 账号 / 命令配置
   - [`manage_code/`](git/manage_code/) — `.gitignore` 等
+- **pitfalls/** — 自己踩过的坑(`problem.md` + `fix.py`)
+  - [`groupby_index_vs_column/`](pitfalls/groupby_index_vs_column/) — `groupby(level=...)` vs `groupby('列名')`,接口不一致会炸
+  - [`rolling_index_misalign/`](pitfalls/rolling_index_misalign/) — `groupby().rolling()` 后 index 变 MultiIndex,赋值回 df 错位
+  - [`feature_label_naming/`](pitfalls/feature_label_naming/) — 特征/标签命名撞概念(`return_5d`),埋数据泄漏隐患
+  - [`script_import_modulenotfound/`](pitfalls/script_import_modulenotfound/) — 直接跑子目录脚本报 `ModuleNotFoundError`
+  - [`yaml_dump_overwrite/`](pitfalls/yaml_dump_overwrite/) — `yaml.dump` 整体覆盖,冲掉手写的配置块
