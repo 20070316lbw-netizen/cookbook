@@ -40,3 +40,5 @@
   - [`feature_label_naming/`](pitfalls/feature_label_naming/) — 特征/标签命名撞概念(`return_5d`),埋数据泄漏隐患
   - [`script_import_modulenotfound/`](pitfalls/script_import_modulenotfound/) — 直接跑子目录脚本报 `ModuleNotFoundError`
   - [`yaml_dump_overwrite/`](pitfalls/yaml_dump_overwrite/) — `yaml.dump` 整体覆盖,冲掉手写的配置块
+  - [`pandas_assign_values_misalign/`](pitfalls/pandas_assign_values_misalign/) — 给 DataFrame 赋值时滥用 `.values` 导致索引静默错位
+  - [`leakage_test_start_embargo/`](pitfalls/leakage_test_start_embargo/) — 测试集起始日硬编码，未考虑隔离带导致未来数据泄露
