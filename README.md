@@ -42,3 +42,4 @@
   - [`yaml_dump_overwrite/`](pitfalls/yaml_dump_overwrite/) — `yaml.dump` 整体覆盖,冲掉手写的配置块
   - [`pandas_assign_values_misalign/`](pitfalls/pandas_assign_values_misalign/) — 给 DataFrame 赋值时滥用 `.values` 导致索引静默错位
   - [`leakage_test_start_embargo/`](pitfalls/leakage_test_start_embargo/) — 测试集起始日硬编码，未考虑隔离带导致未来数据泄露
+  - [`add_features_hurts_ic/`](pitfalls/add_features_hurts_ic/) — 加因子反而让 IC 下降:共线特征在弱信号下稀释而非增强(研究认知坑,非代码 bug)
