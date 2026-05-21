@@ -18,14 +18,18 @@ class MiniFactorEngine:
 
     def _parse_expression(self, expr: str) -> str:
         """
-        将 Qlib 风格的表达式替换为能够放入 pandas.eval 的 Python 表达式。
-        这里使用正则做最简单的字符串替换演示。
+        将 Qlib 风格的表达式替换为能够被 eval 执行的 Python 表达式。
+
+        [WARNING] 工程隐患:
+        这里仅为了 Demo 使用了简单的正则表达式。
+        正则无法正确处理嵌套的括号！
+        例如：Mean(Ref($close, 1), 5) 会在 `([^,]+)` 匹配逗号时炸掉。
+        真正的工程中必须使用 Lexer/Parser (如 AST 解析) 来构建抽象语法树。
         """
         # 1. 替换基础字段 $close -> close
         expr = re.sub(r'\$(\w+)', r'\1', expr)
 
         # 2. 替换 Ref(X, d) -> shift_func(X, d)
-        # 注意：Qlib 中 Ref(X, 1) 表示昨天，Pandas 中 shift(1) 也是昨天
         expr = re.sub(r'Ref\(([^,]+),\s*(-?\d+)\)', r'shift_func(\1, \2)', expr)
 
         # 3. 替换 Mean(X, d) -> mean_func(X, d)
@@ -40,15 +44,20 @@ class MiniFactorEngine:
         parsed_expr = self._parse_expression(expr)
 
         # 我们需要按股票 (instrument) 分组来计算时序因子
-        # instrument 在 MultiIndex 的 level 1
         grouped = self.data.groupby(level=1)
 
         # 定义供 eval 使用的自定义函数
         def shift_func(series, d):
+            # [WARNING] 性能瓶颈:
+            # 这里的 grouped[series.name] 每次调用都在重新取 group。
+            # 如果是 500只股票 * 10年 * 100个因子，这里会慢到怀疑人生。
+            # 真正的工程应预编译执行图，甚至用 Cython/Rust 后端处理。
             return grouped[series.name].shift(int(d))
 
         def mean_func(series, d):
-            # 注意避坑: 使用 transform 防止 index 错位 (参考 pitfalls/rolling_index_misalign)
+            # [WARNING] 性能瓶颈同上。
+            # 此外，这里缺乏中间结果的缓存 (Dependency Cache)。
+            # 如果有多个公式用到 Ref($close, 1)，它会重复算多次。
             return grouped[series.name].transform(lambda x: x.rolling(int(d)).mean())
 
         # 将 DataFrame 的列名提取到局部变量中，供 eval 使用
@@ -57,8 +66,9 @@ class MiniFactorEngine:
         local_dict['mean_func'] = mean_func
 
         try:
-            # 使用原生的 Python eval 计算替换后的表达式
-            # pd.eval 不支持调用自定义函数 (如 mean_func)
+            # [WARNING] 安全隐患:
+            # 真正的工程绝对不能直接裸 eval 外部输入的字符串，这等同于远程代码执行漏洞！
+            # 必须使用受限的沙盒环境（AST白名单）、asteval、numexpr 或自定义解释器。
             res = eval(parsed_expr, {}, local_dict)
             res.name = expr
             return res
