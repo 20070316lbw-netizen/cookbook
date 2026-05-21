@@ -72,3 +72,165 @@
 3. **缓存机制 (Cache Mechanism)**: Qlib 的数据和因子计算具有极强的 `MemCache` 和 `DiskCache` 机制。复杂的公式 (Expression) 计算结果会被缓存，极大加速了日常的回测速度。
 
 综上所述，Qlib 的数据流是一条**单向但可追溯**的高速公路，从底层的二进制日线行情起步，途经因子挖掘、机器学习模型的提炼，最后在回测引擎中完成策略的模拟执行，为量化从业者提供了一套端到端的强大工具链。
+
+---
+
+## 4. 核心代码示例
+
+为了更直观地理解上述概念，下面我们以 Qlib 官方文档中的代码片段为例，展示各个环节的具体实现。
+
+### 示例 1: 初始化与数据加载 (Data Handler)
+
+你可以单独使用 `Alpha158` (Qlib 内置的 158 个经典量化因子) 来获取特征和标签矩阵：
+
+```python
+import qlib
+from qlib.contrib.data.handler import Alpha158
+
+# 1. 基础配置
+data_handler_config = {
+    "start_time": "2008-01-01",
+    "end_time": "2020-08-01",
+    "fit_start_time": "2008-01-01",
+    "fit_end_time": "2014-12-31",
+    "instruments": "csi300", # 沪深300股票池
+}
+
+if __name__ == "__main__":
+    # 2. 初始化 Qlib (需要事先准备好 qlib_data)
+    qlib.init(provider_uri="~/.qlib/qlib_data/cn_data")
+
+    # 3. 实例化 Data Handler
+    h = Alpha158(**data_handler_config)
+
+    # 获取全部因子/标签列名
+    print(h.get_cols())
+    # 获取特征矩阵 (DataFrame)
+    print(h.fetch(col_set="feature"))
+    # 获取标签矩阵 (DataFrame)
+    print(h.fetch(col_set="label"))
+```
+
+### 示例 2: 模型构建与训练 (Dataset & Model)
+
+在实际训练时，我们会结合 `Dataset` 进行数据切片，然后传给 `Model`：
+
+```python
+from qlib.contrib.model.gbdt import LGBModel
+from qlib.utils import init_instance_by_config
+
+# 1. 定义 Dataset 配置 (包含 Handler 和 切分时间段)
+dataset_config = {
+    "class": "DatasetH",
+    "module_path": "qlib.data.dataset",
+    "kwargs": {
+        "handler": {
+            "class": "Alpha158",
+            "module_path": "qlib.contrib.data.handler",
+            "kwargs": data_handler_config,
+        },
+        "segments": {
+            "train": ("2008-01-01", "2014-12-31"),
+            "valid": ("2015-01-01", "2016-12-31"),
+            "test": ("2017-01-01", "2020-08-01"),
+        },
+    },
+}
+
+# 2. 定义 LightGBM 模型配置
+model_config = {
+    "class": "LGBModel",
+    "module_path": "qlib.contrib.model.gbdt",
+    "kwargs": {
+        "loss": "mse",
+        "colsample_bytree": 0.8879,
+        "learning_rate": 0.0421,
+        "subsample": 0.8789,
+        "max_depth": 8,
+        "num_leaves": 210,
+        "num_threads": 20,
+    },
+}
+
+# 3. 实例化并训练
+dataset = init_instance_by_config(dataset_config)
+model = init_instance_by_config(model_config)
+
+model.fit(dataset)
+# 4. 获取预测分数 (DataFrame)
+pred_score = model.predict(dataset)
+```
+
+### 示例 3: 策略配置与回测执行 (Strategy & Backtest)
+
+有了预测分数 `pred_score`，我们可以配置策略并进行回测：
+
+```python
+import pandas as pd
+from qlib.contrib.evaluate import backtest_daily
+from qlib.contrib.evaluate import risk_analysis
+from qlib.contrib.strategy import TopkDropoutStrategy
+
+# 1. 策略配置 (TopK Dropout 策略)
+STRATEGY_CONFIG = {
+    "topk": 50,      # 每天选取得分最高的前 50 只股票
+    "n_drop": 5,     # 跌出前 55 (50+5) 名才会卖出
+    "signal": pred_score, # 传入模型的预测得分
+}
+
+strategy_obj = TopkDropoutStrategy(**STRATEGY_CONFIG)
+
+# 2. 执行回测
+report_normal, positions_normal = backtest_daily(
+    start_time="2017-01-01",
+    end_time="2020-08-01",
+    strategy=strategy_obj
+)
+
+# 3. 风险与收益分析
+analysis = dict()
+# 分析超额收益 (扣除基准 SH000300)
+analysis["excess_return_without_cost"] = risk_analysis(report_normal["return"] - report_normal["bench"])
+# 分析扣费后的超额收益
+analysis["excess_return_with_cost"] = risk_analysis(report_normal["return"] - report_normal["bench"] - report_normal["cost"])
+
+analysis_df = pd.concat(analysis)
+print(analysis_df)
+# 输出结果包含：年化收益率、信息比率、最大回撤等
+```
+
+### 附: YAML 配置驱动 (`qrun`)
+
+前面所有的 Python 代码，在 Qlib 中完全可以浓缩为一个 YAML 配置文件。这极大方便了批量跑实验。你只需定义 `task` 即可：
+
+```yaml
+task:
+    model:
+        class: LGBModel
+        module_path: qlib.contrib.model.gbdt
+        kwargs:
+            loss: mse
+            learning_rate: 0.0421
+            # ... (其他模型参数)
+    dataset:
+        class: DatasetH
+        module_path: qlib.data.dataset
+        kwargs:
+            handler:
+                class: Alpha158
+                module_path: qlib.contrib.data.handler
+                kwargs: *data_handler_config
+            segments:
+                train: [2008-01-01, 2014-12-31]
+                valid: [2015-01-01, 2016-12-31]
+                test: [2017-01-01, 2020-08-01]
+    record:
+        - class: SignalRecord
+          module_path: qlib.workflow.record_temp
+          kwargs: {}
+        - class: PortAnaRecord
+          module_path: qlib.workflow.record_temp
+          kwargs:
+              config: *port_analysis_config
+```
+通过终端运行 `qrun configuration.yaml`，以上整套流程就能自动跑完！
