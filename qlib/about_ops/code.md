@@ -28,6 +28,65 @@ def load_data(instrument, start_index, end_index, *args):
             
     print("参数校验通过，开始加载数据...")
 ```
+isinstance() 是 Python 中极为常用的一个内置函数，主要用于检查一个对象是否属于某个特定的类型（或者其子类）。
+
+基础语法是：
+```
+isinstance(object, classinfo)
+```
+object：要检查的实例对象。
+​classinfo：目标类型。可以是单个类、内置类型（如 int, str, list），也可以是由它们组成的元组（Tuple）。
+​返回值：布尔值（True 或 False）。
+
+使用场景：
+场景一：最基础的单类型检查
+​判断一个变量是不是某种特定的基础类型或自定义类：
+```
+name = "Qlib"
+print(isinstance(name, str))   # 输出: True
+print(isinstance(name, int))   # 输出: False
+
+# 检查 pandas 的 DataFrame
+import pandas as pd
+df = pd.DataFrame()
+print(isinstance(df, pd.DataFrame))  # 输出: True
+
+```
+
+场景二：多选一类型检查（传入元组）
+​有时候一个参数可以接受多种类型。比如在量化中，一个表示时间的参数可能允许传入字符串（"2026-05-21"），也可能允许传入 datetime 对象。你可以把这些允许的类型打包成一个元组传给 classinfo：
+```
+# 只要对象属于元组中任意一种类型，就返回 True
+x = [1, 2, 3]
+print(isinstance(x, (list, tuple)))  # 输出: True（因为 x 是列表）
+
+y = 42
+print(isinstance(y, (str, list, dict))) # 输出: False（y 是 int，不在元组内）
+```
+场景三：子类认祖归宗（支持继承关系）
+​这是 isinstance() 最强大的特性：它承认继承关系。如果一个类是另一个类的子类，那么子类的实例去和父类做 isinstance 检查，结果同样是 True。
+```
+class Animal:
+    pass
+
+class Dog(Animal): # Dog 继承自 Animal
+    pass
+
+my_dog = Dog()
+
+print(isinstance(my_dog, Dog))    # 输出: True
+print(isinstance(my_dog, Animal)) # 输出: True (因为狗也是动物)
+```
+一个致命的对比：isinstance() vs type()
+​初学者经常分不清 isinstance() 和 type() == xxx。它们有本质的区别：type() 不考虑继承关系。
+```
+# 接上面的 Animal 和 Dog 例子
+print(type(my_dog) == Dog)    # 输出: True
+print(type(my_dog) == Animal) # 输出: False！(type 只认精准匹配，不认父类)
+```
+​💡 黄金法则：在实际开发中，永远优先使用 isinstance()。因为面向对象编程非常讲究“多态”，你写一个处理 Animal 的函数，用户传入一个 Dog，用 isinstance 就能完美兼容，用 type 就会无情报错。
+
+
 ---
 ​整个 ops.py 里的几十个类，其实可以整齐地划分为以下四大核心家族。读代码时，每个家族抽一个代表来看就行：
 ​1. 单元素算子家族 (ElemOperator)
