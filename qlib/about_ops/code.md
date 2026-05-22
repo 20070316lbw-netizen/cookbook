@@ -87,6 +87,26 @@ print(type(my_dog) == Animal) # 输出: False！(type 只认精准匹配，不�
 ​💡 黄金法则：在实际开发中，永远优先使用 isinstance()。因为面向对象编程非常讲究“多态”，你写一个处理 Animal 的函数，用户传入一个 Dog，用 isinstance 就能完美兼容，用 type 就会无情报错。
 
 
+回看前面 Qlib 源码
+​现在我们带着对 isinstance 的理解，切回你之前发出的 ops.py 的源码片段：
+```
+def get_longest_back_rolling(self):
+    if isinstance(self.feature_left, (Expression,)):
+        left_br = self.feature_left.get_longest_back_rolling()
+    else:
+        left_br = 0
+```
+这段代码在干什么？
+​在 Qlib 的双目算子（比如 Add(feature_left, feature_right)）中，左边的参数可能是一个复杂的特征表达式（比如 Ref($close, 1)），但也可能只是一个简单的数字常数（比如 1.0）。
+
+​Qlib 使用 isinstance(self.feature_left, (Expression,)) 来做检查。
+
+​如果左边的参数是 Expression（或者继承自它的子类，如各种算子），说明它是一个特征，有自己的滚动窗口，所以去调用它的 .get_longest_back_rolling() 方法。
+
+​如果它不是 Expression（比如只是一个纯数字 1.0），说明它没有时序窗口的概念，直接让 left_br = 0。
+
+​这就是 isinstance 在大型工业级框架里最典型的用法——动态识别对象身份，从而采取不同的处理策略。
+
 ---
 ​整个 ops.py 里的几十个类，其实可以整齐地划分为以下四大核心家族。读代码时，每个家族抽一个代表来看就行：
 ​1. 单元素算子家族 (ElemOperator)
