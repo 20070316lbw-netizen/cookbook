@@ -27,7 +27,8 @@ def do_something(data: pd.DataFrame, params: dict | None = None) -> pd.DataFrame
         返回值的形状/含义
     """
     if params is None:
-        params = DEFAULT_PARAMS
+        # .copy() 防止函数内修改 params 时反过来污染全局 DEFAULT_PARAMS
+        params = DEFAULT_PARAMS.copy()
     raise NotImplementedError
 
 
