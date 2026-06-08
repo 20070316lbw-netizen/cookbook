@@ -45,6 +45,8 @@ class MiniFactorEngine:
 
         # 我们需要按股票 (instrument) 分组来计算时序因子
         grouped = self.data.groupby(level=1)
+        # [WARNING] 隐患: 使用了位置数字索引 level=1。 在 MultiIndex 顺序发生变化时会错位或报错。
+        # 正式情况下该使用具体层级名: groupby(level="instrument"), 详见 pitfalls/groupby_index_vs_column。
 
         # 定义供 eval 使用的自定义函数
         def shift_func(series, d):

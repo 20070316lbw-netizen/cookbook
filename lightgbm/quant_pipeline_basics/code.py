@@ -186,6 +186,9 @@ if __name__ == "__main__":
     split_date = dates[int(len(dates) * 0.7)]
     dt = data.index.get_level_values("datetime")
     train, valid = data[dt <= split_date], data[dt > split_date]
+    # [WARNING] 隐患: 缺少隔离带 (Embargo)。 在真实时序量化场景下, 标签 label 包含了未来 5 天的信息,
+    # 直接在 split_date 硬切会导致训练集的最后几天“偷看”到了测试集期间的价格走势 (未来数据泄露)。
+    # 正式情况下该在 train 和 valid 之间留出至少 5 个交易日的隔离带, 详见 pitfalls/leakage_test_start_embargo。
     feat_cols = X.columns.tolist()
 
     model = train_lgb(

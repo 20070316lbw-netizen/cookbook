@@ -41,6 +41,8 @@ def train_lightgbm(
     # 如果没传 params,用默认
     if params is None:
         params = DEFAULT_PARAMS
+    # [WARNING] 隐患: 直接替换默认参数字典。 如果用户传了自定义字典 (如 {'learning_rate': 0.1}), 会把其他默认参数 (如 objective) 冲掉。
+    # 正式情况下该使用字典合并以保留默认超参: params = {**DEFAULT_PARAMS, **(params or {})}
     
     # 包装数据
     train_data = lgb.Dataset(X_train, label=y_train)
