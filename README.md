@@ -9,6 +9,9 @@
 - `notes.md` — 输入输出、关键细节、坑
 - `sources.md` — 出处和参考链接
 
+不是每个子文件夹都三件齐全:偏概念的笔记可能只有 `notes.md`,纯代码片段可能没有
+`sources.md`。新建条目时从 [`_templates/`](_templates/) 复制对应模板起步。
+
 例外:`pitfalls/` 收录自己实际踩过的坑,每个子文件夹是两件套:
 - `problem.md` — 坑长什么样、为什么会炸、怎么解、教训
 - `fix.py` — 错误写法 vs 正确写法,可直接运行对照
@@ -17,8 +20,12 @@
 
 - **duckdb/**
   - [`wide_to_long/`](duckdb/wide_to_long/) — 宽表 ↔ 长表 (UNPIVOT / melt) 与 qlib 风格 MultiIndex
+  - [`count_distinct_vs_groupby/`](duckdb/count_distinct_vs_groupby/) — `COUNT(DISTINCT)` 只要数量 vs `GROUP BY` 要列表
 - **pandas/**
   - [`rolling_windows/`](pandas/rolling_windows/) — 滚动窗口
+- **python/**
+  - [`class_return_types/`](python/class_return_types/) — 同一列表里循环处理的方法,返回值类型必须一致
+  - [`path_and_syspath/`](python/path_and_syspath/) — `__file__` / `.parent` 路径拆解与 `sys.path.insert`
 - **lightgbm/**
   - [`train_function_template/`](lightgbm/train_function_template/) — 训练/预测函数模板,参数字典抽离
   - [`quant_pipeline_basics/`](lightgbm/quant_pipeline_basics/) — 量化最小可跑流水线 (qlib 简化版):打标签 / 写特征 / 训练 + IC 评估
@@ -29,6 +36,11 @@
   - [`risk_metrics/`](evaluation/risk_metrics/) — 业绩 / 风险指标 (empyrical-reloaded 简化版):年化收益 / 波动 / 夏普 / 最大回撤 / Calmar / Sortino
   - [`alphalens_basics/`](evaluation/alphalens_basics/) — 因子诊断核心 (Alphalens 简化版):IC / IR / 分位单调性 / 换手
   - [`concept_drift_ddgda/`](evaluation/concept_drift_ddgda/) — 概念漂移下的样本时间加权 (DDG-DA 简化版):walk-forward + 指数衰减权重
+- **qlib/** — 微软 Qlib 源码与机制阅读笔记
+  - [`data_flow_concepts/`](qlib/data_flow_concepts/) — 整体架构与数据流向:Data Handler → Model → Strategy → Backtest
+  - [`factor_engine/`](qlib/factor_engine/) — 因子引擎概览:表达式引擎 (Formulaic Alpha)、动态过滤、多级缓存
+  - [`expression_internals/`](qlib/expression_internals/) — 表达式内核:Expression 基类 / Feature 叶子 / ops 算子四大家族
+  - [`mini_factor_engine/`](qlib/mini_factor_engine/) — 手写一个最小可跑的 Qlib 风格表达式引擎 (含 Demo 到工业级的差距)
 - **logging/**
   - [`loguru_basics/`](logging/loguru_basics/) — loguru 入门
 - **git/**
