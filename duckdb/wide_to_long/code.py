@@ -1,7 +1,10 @@
 """
-把存进 DuckDB 的「宽表」(列=股票/品种,行=日期) 转成「长表」
-(每行一个 (datetime, instrument, value) ),再升一档变成 qlib 风格的
-MultiIndex DataFrame: index=(datetime, instrument), columns=features。
+宽表 (列=股票/品种,行=日期) ↔ 长表 (每行一个 (datetime, instrument, value)) ,
+以及 qlib 风格的 MultiIndex DataFrame: index=(datetime, instrument), columns=features。
+
+原则: **数据库里只存长表**。 宽转长应该发生在「入库之前」的 pandas 侧
+(stack / melt) , 入库后增量更新就是纯 append 行, 不用动 schema 。
+DuckDB 的 UNPIVOT 只在「数据已经以宽表形态躺在库里」时当补救用。
 
 为什么这么做、谁在用,看 notes.md 和 sources.md。
 """
@@ -10,7 +13,46 @@ import duckdb
 import pandas as pd
 
 
-# ---------- 1) SQL 侧:DuckDB 原生 UNPIVOT ----------
+# ---------- 1) 首选: pandas stack , 宽表一步到 qlib 风格 MultiIndex ----------
+
+def wide_to_long_stack(
+    df: pd.DataFrame,
+    id_col: str = "date",
+    name_col: str = "instrument",
+    value_name: str = "value",
+) -> pd.Series:
+    """
+    宽表 → 长表的首选写法: set_index + stack 。
+
+    宽表 (df):  date | AAPL | MSFT | GOOG | ...
+    返回:       MultiIndex (date, instrument) 的 Series
+
+    比 melt 的优势: 直接得到 (datetime, instrument) 两层索引, 就是 qlib /
+    Alphalens 要的形态, 不用再 set_index; 入库时 reset_index() 即是
+    (date, instrument, value) 三列长表, 直接 INSERT 。
+    """
+    s = df.set_index(id_col).stack(future_stack=True).rename(value_name)
+    s.index.set_names([id_col, name_col], inplace=True)
+    return s.dropna()
+
+
+# ---------- 2) pandas melt: 要平铺三列长表 (入库) 时用 ----------
+
+def wide_to_long_pandas(
+    df: pd.DataFrame,
+    id_col: str = "date",
+    name_col: str = "instrument",
+    value_name: str = "value",
+) -> pd.DataFrame:
+    """melt 版: 跟 stack 等价, 但返回平铺的三列 DataFrame (没有索引层级)。"""
+    return df.melt(
+        id_vars=[id_col],
+        var_name=name_col,
+        value_name=value_name,
+    )
+
+
+# ---------- 3) 补救: 宽表已经在 DuckDB 里时, 用原生 UNPIVOT ----------
 
 def wide_to_long_sql(
     con: duckdb.DuckDBPyConnection,
@@ -20,7 +62,8 @@ def wide_to_long_sql(
     name_col: str = "instrument",
 ) -> pd.DataFrame:
     """
-    用 DuckDB 的 UNPIVOT 把宽表转长表。
+    用 DuckDB 的 UNPIVOT 把库内宽表转长表。 只该出现在「历史遗留的宽表
+    已经在库里」的一次性迁移脚本里 —— 新数据应该在入库前就转成长表。
 
     宽表 (table):  date | AAPL | MSFT | GOOG | ...
     长表 (返回):   date | instrument | value
@@ -41,23 +84,7 @@ def wide_to_long_sql(
     return con.execute(sql).fetchdf()
 
 
-# ---------- 2) pandas 侧:melt ----------
-
-def wide_to_long_pandas(
-    df: pd.DataFrame,
-    id_col: str = "date",
-    name_col: str = "instrument",
-    value_name: str = "value",
-) -> pd.DataFrame:
-    """pandas 版,等价于 DuckDB 的 UNPIVOT。"""
-    return df.melt(
-        id_vars=[id_col],
-        var_name=name_col,
-        value_name=value_name,
-    )
-
-
-# ---------- 3) 长表 → qlib 风格 MultiIndex ----------
+# ---------- 4) 长表 → qlib 风格 MultiIndex ----------
 
 def to_multiindex(
     long_df: pd.DataFrame,
@@ -77,7 +104,7 @@ def to_multiindex(
     return df.set_index([datetime_col, instrument_col]).sort_index()
 
 
-# ---------- 4) 反向:长表 → 宽表 (做画图/对比时常用) ----------
+# ---------- 5) 反向:长表 → 宽表 (做画图/对比时常用) ----------
 
 def long_to_wide_sql(
     con: duckdb.DuckDBPyConnection,
@@ -104,37 +131,39 @@ def long_to_wide_sql(
 
 
 if __name__ == "__main__":
-    # 自测: 构造宽表 → 长表 → MultiIndex → 回宽表
+    # 自测: 宽表 (源头) → stack 成长表 → 入库 → 取出来变 MultiIndex → 回宽表
+    wide = pd.DataFrame({
+        "date": ["2024-01-01", "2024-01-02", "2024-01-03"],
+        "AAPL": [100.0, 101.0, 102.5],
+        "MSFT": [200.0, 201.0, 199.0],
+        "GOOG": [300.0, 299.0, 305.0],
+    })
+    print("== 宽表 (源头拿到的形态) ==")
+    print(wide)
+
+    long_s = wide_to_long_stack(wide, value_name="close")
+    print("\n== 长表 (pandas stack, 首选) ==")
+    print(long_s.head(6))
+
+    long_df_pd = wide_to_long_pandas(wide, value_name="close")
+    print("\n== 长表 (pandas melt, 平铺三列) ==")
+    print(long_df_pd.head(6))
+
+    # 入库: 数据库里只存长表, 之后每天的新数据 append 行即可
     con = duckdb.connect(":memory:")
-    con.execute("""
-        CREATE TABLE prices AS
-        SELECT * FROM (VALUES
-            ('2024-01-01', 100.0, 200.0, 300.0),
-            ('2024-01-02', 101.0, 201.0, 299.0),
-            ('2024-01-03', 102.5, 199.0, 305.0)
-        ) AS t(date, AAPL, MSFT, GOOG)
-    """)
+    con.execute("CREATE TABLE prices_long AS SELECT * FROM long_df_pd")
 
-    print("== 宽表 ==")
-    print(con.execute("SELECT * FROM prices").fetchdf())
-
-    long_df = wide_to_long_sql(con, "prices", value_name="close")
-    print("\n== 长表 (DuckDB UNPIVOT) ==")
-    print(long_df)
-
-    long_df_pd = wide_to_long_pandas(
-        con.execute("SELECT * FROM prices").fetchdf(),
-        value_name="close",
-    )
-    print("\n== 长表 (pandas melt, 等价) ==")
-    print(long_df_pd)
-
-    mi = to_multiindex(long_df)
-    print("\n== MultiIndex (qlib 风格) ==")
+    mi = to_multiindex(con.execute("SELECT * FROM prices_long").fetchdf())
+    print("\n== 库里取出来 → MultiIndex (qlib 风格) ==")
     print(mi)
 
-    # 把长表灌回 DuckDB, 再 PIVOT 回宽表
-    con.register("long_df", long_df)
-    wide_again = long_to_wide_sql(con, "long_df", value_col="close")
+    # 画图 / 对比时偶尔要回宽表
+    wide_again = long_to_wide_sql(con, "prices_long", value_col="close")
     print("\n== 长 → 宽 (DuckDB PIVOT) ==")
     print(wide_again)
+
+    # 补救路线: 假如宽表已经在库里了, 才轮到 UNPIVOT
+    con.register("prices_wide", wide)
+    long_from_sql = wide_to_long_sql(con, "prices_wide", value_name="close")
+    print("\n== 长表 (DuckDB UNPIVOT, 库内迁移用) ==")
+    print(long_from_sql.head(6))
