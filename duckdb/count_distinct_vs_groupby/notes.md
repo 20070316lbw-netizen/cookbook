@@ -26,23 +26,24 @@ return result[0]  # 直接拿整数
 
 ---
 
-### 要列表 → `GROUP BY date`
+### 要列表 → `SELECT DISTINCT date`
 
 ```sql
-SELECT date
+SELECT DISTINCT date
 FROM prices
-GROUP BY date
 ORDER BY date
 ```
 
 - 把所有不重复的日期都拉回 Python，是一个 DataFrame
 - **用途：** 需要知道"具体是哪些日期"，方便后续复用
+- 无聚合的 `GROUP BY date` 也能去重（执行计划一样），但 `DISTINCT`
+  直接说出了意图——「我要去重」；`GROUP BY` 留给真有聚合
+  （`count/sum/...`）的场景
 
 Python 里：
 ```python
 result = con.execute("""
-    SELECT date FROM prices
-    GROUP BY date
+    SELECT DISTINCT date FROM prices
     ORDER BY date
 """).df()
 return result["date"].tolist()
@@ -52,11 +53,12 @@ return result["date"].tolist()
 
 ## 健壮性对比
 
-| | `COUNT(DISTINCT)` | `GROUP BY` |
+| | `COUNT(DISTINCT)` | `SELECT DISTINCT` |
 |---|---|---|
 | 返回值 | 整数 | 列表/DataFrame |
 | 内存占用 | 极小（一个数字） | 随数据量增长 |
 | 速度 | 快（数据库内算完） | 需要传输所有日期 |
 | 适用场景 | 只要数量 | 需要具体内容 |
 
-> 只要数量用 `COUNT(DISTINCT)`，需要内容用 `GROUP BY`。
+> 只要数量用 `COUNT(DISTINCT)`，需要内容用 `SELECT DISTINCT`，
+> 真有聚合才用 `GROUP BY`。
