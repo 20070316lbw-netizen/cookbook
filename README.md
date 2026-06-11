@@ -25,9 +25,14 @@
   - [`rolling_windows/`](pandas/rolling_windows/) — 滚动窗口:单序列基本款 + panel 上按 instrument 分组滚动 (transform)
   - [`dataframe_constructor/`](pandas/dataframe_constructor/) — `pd.DataFrame()` 能吃哪些形态:list of dict / dict of list / 嵌套 list
   - [`to_csv_index_false/`](pandas/to_csv_index_false/) — 写 CSV 几乎总要 `index=False`,否则读回来多一列 `Unnamed: 0`
+  - [`str_accessor/`](pandas/str_accessor/) — `.str` 访问器:整列字符串操作(zfill 补零 CIK 等),单字符串方法垫 `.str` 才能上列
 - **python/**
   - [`class_return_types/`](python/class_return_types/) — 同一列表里循环处理的方法,返回值类型必须一致
   - [`path_and_syspath/`](python/path_and_syspath/) — `__file__` / `.parent` 路径拆解与 `sys.path.insert`
+  - [`abc_ducktyping_protocol/`](python/abc_ducktyping_protocol/) — 接口三兄弟:ABC 运行时强制 / 鸭子类型全凭默契 / Protocol 静态把关
+  - [`try_except_raise/`](python/try_except_raise/) — try/except/raise 固定形状:log+裸raise 重抛、只捕预期异常、raise_for_status 暗坑
+  - [`run_with_dash_m/`](python/run_with_dash_m/) — `python -m` 模块方式运行 vs 文件路径方式,项目内 import 为何必须用 -m
+  - [`pyright_strict_workflow/`](python/pyright_strict_workflow/) — strict 模式生存指南:读规则名、按项目配置、"签名是承诺逐路径验收"心法
 - **lightgbm/**
   - [`train_function_template/`](lightgbm/train_function_template/) — 训练/预测函数模板,参数字典抽离
   - [`quant_pipeline_basics/`](lightgbm/quant_pipeline_basics/) — 量化最小可跑流水线 (qlib 简化版):打标签 / 写特征 / 训练 + IC 评估
@@ -49,6 +54,7 @@
   - [`connect_my_git/`](git/connect_my_git/) — 账号 / 命令配置
   - [`commit_and_push_workflow/`](git/commit_and_push_workflow/) — 提交代码标准流程:个人库直推 main vs 协作项目分支 + PR
   - [`manage_code/`](git/manage_code/) — `.gitignore` 等
+  - [`rename_detection/`](git/rename_detection/) — 重构/移动文件后的提交:`add -A`、rename 靠相似度猜、delete+add 何时正常
 - **pitfalls/** — 自己踩过的坑(`problem.md` + `fix.py`)
   - [`groupby_index_vs_column/`](pitfalls/groupby_index_vs_column/) — `groupby(level=...)` vs `groupby('列名')`,接口不一致会炸
   - [`rolling_index_misalign/`](pitfalls/rolling_index_misalign/) — `groupby().rolling()` 后 index 变 MultiIndex,赋值回 df 错位
@@ -58,3 +64,5 @@
   - [`pandas_assign_values_misalign/`](pitfalls/pandas_assign_values_misalign/) — 给 DataFrame 赋值时滥用 `.values` 导致索引静默错位
   - [`leakage_test_start_embargo/`](pitfalls/leakage_test_start_embargo/) — 测试集起始日硬编码，未考虑隔离带导致未来数据泄露
   - [`add_features_hurts_ic/`](pitfalls/add_features_hurts_ic/) — 加因子反而让 IC 下降:共线特征在弱信号下稀释而非增强(研究认知坑,非代码 bug)
+  - [`bare_raise_outside_except/`](pitfalls/bare_raise_outside_except/) — 裸 raise 写在 except 之外,`No active exception to re-raise`
+  - [`silent_empty_dataframe/`](pitfalls/silent_empty_dataframe/) — 失败时返回空 DataFrame 消 pyright 红,埋下管道静默丢数据
