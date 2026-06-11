@@ -85,6 +85,11 @@ def get_feature_config(config={...}):
 | STD{w} | 过去 w 日已实现波动率                 | `Std(close/Ref(close,1)-1, w)` |
 | VMA{w} | 当前成交量相对 w 日均量的偏离 (量能)  | `Mean(volume, w) / volume - 1` |
 
+注意方向: qlib 原版的 ROC 是 `Ref($close, w)/$close` (过去价 / 现价,
+涨得越多值越**小**) ; 这里写成更直觉的 `pct_change(w)` (涨得越多值越大) 。
+两者只是单调变换, 对树模型没影响, 但跟别人对因子值 / IC 符号时要知道
+方向是反的。 MA/VMA 同理 (qlib 是 `Mean(...)/$close`, 没有 `-1`) 。
+
 在 pandas 里, 同样必须按 instrument 分组:
 
 ```python
