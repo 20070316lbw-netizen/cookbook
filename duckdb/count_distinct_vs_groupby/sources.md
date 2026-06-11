@@ -4,6 +4,7 @@
 - 仓库主页：https://github.com/duckdb/duckdb
 - 聚合函数 `count(DISTINCT ...)`：
   https://duckdb.org/docs/sql/functions/aggregates
+- `SELECT DISTINCT`：https://duckdb.org/docs/sql/query_syntax/select
 - `GROUP BY`：https://duckdb.org/docs/sql/query_syntax/groupby
 - Python API（`.fetchone()` / `.df()`）：
   https://duckdb.org/docs/api/python/overview

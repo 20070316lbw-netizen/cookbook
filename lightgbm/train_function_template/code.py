@@ -30,13 +30,17 @@ def train_lightgbm(
     Args:
         X_train: 训练集特征
         y_train: 训练集标签
-        X_valid: 验证集特征(可选,用于 early stopping)
+        X_valid: 验证集特征(可选,训练时打印 valid 上的 metric)
         y_valid: 验证集标签(可选)
         params: LightGBM 超参数字典,不传则用默认
         num_boost_round: 训练多少棵树
-    
+
     Returns:
         训练好的 LightGBM 模型
+
+    注意: 这里只把 valid 加进 valid_sets 做监控。 LightGBM 4.x 里想真正
+    early stopping 必须再传 callbacks=[lgb.early_stopping(rounds)] ,
+    光有 valid_sets 是不会停的, 见 lightgbm/quant_pipeline_basics/ 的写法。
     """
     # 如果没传 params,用默认
     if params is None:
@@ -64,8 +68,12 @@ def train_lightgbm(
 
 
 def predict(model: lgb.Booster, X: pd.DataFrame) -> pd.Series:
-    """用训练好的模型预测"""
-    return model.predict(X)
+    """用训练好的模型预测。
+
+    model.predict 返回的是 numpy 数组, 这里包回带 X.index 的 Series ——
+    量化里 index 是 (datetime, instrument), 丢了它后面 groupby 算 IC 都做不了。
+    """
+    return pd.Series(model.predict(X), index=X.index, name="pred")
 
 
 if __name__ == "__main__":

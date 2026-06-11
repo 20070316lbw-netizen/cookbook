@@ -59,7 +59,7 @@ def train_lightgbm(
     Args:
         X_train: 训练集特征
         y_train: 训练集标签
-        X_valid: 验证集特征(可选,用于 early stopping)
+        X_valid: 验证集特征(可选,训练时打印 valid 上的 metric)
         y_valid: 验证集标签(可选)
         params: LightGBM 超参数字典,不传则用默认
         num_boost_round: 训练多少棵树

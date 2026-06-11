@@ -13,8 +13,8 @@ zipline-reloaded 完整跑一遍要拉 `TradingAlgorithm` + `TradingSimulation` 
 ## 1. 事件驱动到底是什么
 
 「事件驱动」这个词在 zipline 里其实就是**一个 for 循环**: 每根 K 线 (一个
-event) 触发一组动作。 zipline 的主循环在 `TradingSimulation.transform`
-里, 简化到只剩骨架就是:
+event) 触发一组动作。 zipline 的主循环在 `AlgorithmSimulator.transform`
+(`gens/tradesimulation.py`) 里, 简化到只剩骨架就是:
 
 ```python
 for dt, bar in data_portal:
@@ -34,7 +34,7 @@ for dt, bar in data_portal:
 
 ## 2. mark-to-market: 怎么算 daily return
 
-zipline 的核心公式在 `Ledger.update_portfolio` ( `finance/ledger.py` 666-697) :
+zipline 的核心公式在 `Ledger.update_portfolio` ( `finance/ledger.py` , 约 373-402 行) :
 
 ```python
 start_value = portfolio.portfolio_value

@@ -19,10 +19,12 @@
 ## 索引
 
 - **duckdb/**
-  - [`wide_to_long/`](duckdb/wide_to_long/) — 宽表 ↔ 长表 (UNPIVOT / melt) 与 qlib 风格 MultiIndex
+  - [`wide_to_long/`](duckdb/wide_to_long/) — 宽表 ↔ 长表:入库前 pandas stack/melt 转长表 (首选),库内遗留宽表才用 UNPIVOT;qlib 风格 MultiIndex
   - [`count_distinct_vs_groupby/`](duckdb/count_distinct_vs_groupby/) — `COUNT(DISTINCT)` 只要数量 vs `GROUP BY` 要列表
 - **pandas/**
-  - [`rolling_windows/`](pandas/rolling_windows/) — 滚动窗口
+  - [`rolling_windows/`](pandas/rolling_windows/) — 滚动窗口:单序列基本款 + panel 上按 instrument 分组滚动 (transform)
+  - [`dataframe_constructor/`](pandas/dataframe_constructor/) — `pd.DataFrame()` 能吃哪些形态:list of dict / dict of list / 嵌套 list
+  - [`to_csv_index_false/`](pandas/to_csv_index_false/) — 写 CSV 几乎总要 `index=False`,否则读回来多一列 `Unnamed: 0`
 - **python/**
   - [`class_return_types/`](python/class_return_types/) — 同一列表里循环处理的方法,返回值类型必须一致
   - [`path_and_syspath/`](python/path_and_syspath/) — `__file__` / `.parent` 路径拆解与 `sys.path.insert`
@@ -45,6 +47,7 @@
   - [`loguru_basics/`](logging/loguru_basics/) — loguru 入门
 - **git/**
   - [`connect_my_git/`](git/connect_my_git/) — 账号 / 命令配置
+  - [`commit_and_push_workflow/`](git/commit_and_push_workflow/) — 提交代码标准流程:个人库直推 main vs 协作项目分支 + PR
   - [`manage_code/`](git/manage_code/) — `.gitignore` 等
 - **pitfalls/** — 自己踩过的坑(`problem.md` + `fix.py`)
   - [`groupby_index_vs_column/`](pitfalls/groupby_index_vs_column/) — `groupby(level=...)` vs `groupby('列名')`,接口不一致会炸

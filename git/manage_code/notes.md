@@ -24,4 +24,8 @@ Thumbs.db
 *.sqlite
 .env
 secrets.*
+
+# 日志 (loguru 等运行产物)
+*.log
+logs/
 ```

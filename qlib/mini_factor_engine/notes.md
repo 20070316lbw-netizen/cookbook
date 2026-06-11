@@ -48,7 +48,10 @@ factor = mean_5d / ref_1d - 1
 2. **注入上下文计算 (Execution / Evaluation)**:
    把 DataFrame 里的所有列（如 `close`, `open`）提取出来作为变量。
    提前定义好 `mean_func` 和 `shift_func` 并在内部实现安全的 `groupby` 操作。
-   利用 `pandas.eval()` 强大的执行能力，把替换后的字符串塞进去直接跑。
+   用 Python 内置的 `eval(expr, {}, local_dict)` 把替换后的字符串直接跑起来
+   （注意不是 `pandas.eval()`——后者只支持有限的算术表达式语法，塞不进
+   我们自定义的 `mean_func` / `shift_func`；当然内置 eval 的代价就是下面
+   3.1 里说的 RCE 安全隐患）。
 
 这样一来，我们就实现了一个“伪 AST (抽象语法树)”的解析引擎！
 

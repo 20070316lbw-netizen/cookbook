@@ -68,7 +68,7 @@ qlib 给模型的输入就是上面那种 MultiIndex DataFrame:
 
 ```
 原始行情 (csv/宽表)
-     │  UNPIVOT / melt
+     │  stack / melt   ←── 宽转长在「入库之前」的 pandas 侧做
      ▼
 长表 (date, instrument, feature, value)  ←── 存进 DuckDB / Parquet
      │  set_index([datetime, instrument])
@@ -76,13 +76,26 @@ qlib 给模型的输入就是上面那种 MultiIndex DataFrame:
 MultiIndex DataFrame  ←── 喂给 qlib / Alpha158 / LightGBM
 ```
 
-## 4. 关键操作 (DuckDB 侧)
+## 4. 关键操作
+
+**首选 (pandas 侧, 入库前):**
+
+- 宽 → 长一步到位: `df.set_index("date").stack()` —— 直接得到
+  (date, instrument) 两层 MultiIndex, 就是 qlib / Alphalens 要的形态;
+  入库时 `reset_index()` 即是三列长表。
+- 要平铺三列时: `df.melt(id_vars=["date"], ...)` , 跟 stack 等价。
+- 长 → 宽 (画图/对比): `pivot` / `unstack` 。
+
+**补救 (DuckDB 侧, 仅当宽表已经在库里):**
 
 - 宽 → 长: `UNPIVOT table ON COLUMNS(* EXCLUDE (date)) INTO NAME instrument VALUE close`
 - 长 → 宽: `PIVOT table ON instrument USING first(close) GROUP BY date`
 
-pandas 等价物: `melt` ↔ `pivot` / `pivot_table` ;
-多层用 `stack` / `unstack` 。 见 code.py 里两边都写了。
+为什么宽转长不放在 DB 侧做: 数据库里本来就**只该存长表**。 长表是
+append-only 的 —— 每天新数据、 新上市的票都只是多几行 INSERT;
+宽表入库后每加一只票都要 `ALTER TABLE` , 更新流程完全不一样。
+所以 UNPIVOT 只该出现在「历史遗留宽表」的一次性迁移脚本里,
+日常 pipeline 里见到它说明数据在错误的形态下入了库。
 
 ## 5. 坑
 
