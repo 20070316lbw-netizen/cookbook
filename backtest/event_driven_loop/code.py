@@ -92,7 +92,8 @@ def run_backtest(
     starting_cash: float = 1_000_000.0,
 ) -> pd.Series:
     """
-    事件驱动主循环, 对应 zipline 里 `TradingSimulation.transform` 的 for-bar:
+    事件驱动主循环, 对应 zipline 里 `AlgorithmSimulator.transform`
+    (gens/tradesimulation.py) 的 for-bar:
         for each bar:
             1. ledger 用新价 mark-to-market, 记录 today's return
             2. 用「今天能看到的」信号下单 (信号已 shift 过)
