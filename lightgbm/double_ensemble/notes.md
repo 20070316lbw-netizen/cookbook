@@ -55,6 +55,20 @@ LightGBM 自带的 `evals_result` (那是 epoch 级聚合) 。 拿这玩意得�
 `model.predict(X, start_iteration=t, num_iteration=1)` 一棵一棵累加预测
 (代码里的 `retrieve_loss_curve`) 。
 
+### 另一个坑: `X`/`y` 带 MultiIndex 时会直接崩
+
+`retrieve_loss_curve` 原来写的是 `pd.DataFrame(curve)`, 没带 `index=X.index`——
+如果传进来的 `X_train`/`y_train` 是这个仓库到处在用的量化惯例
+(`MultiIndex(datetime, instrument)`) , `loss_curve` 会拿到一个默认
+`0..N-1` 的 `RangeIndex`, 跟 `loss_values` (保留了 MultiIndex) 对不上,
+在 `sample_reweight` 里 `h1 + h2` 直接报 `ValueError: cannot join with no
+overlapping index names`。 `code.py` 自己的 `__main__` 自测测不出这个问题,
+因为它的合成数据本来就是默认 `RangeIndex`, 恰好"侥幸对齐"。 一旦真的接量化
+数据 (比如 `lightgbm/demo_full_pipeline.py` 那样跟
+`quant_pipeline_basics.make_label/make_features` 拼起来用) 就会暴露。
+现在 `retrieve_loss_curve` 显式带 `index=X.index`, `sample_reweight` 里
+`weights` 也显式对齐到同一个 index, 两处都修了。
+
 ---
 
 ## 2. FS (Feature Selection) —— 把噪声特征降权 / 丢掉

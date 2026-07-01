@@ -37,12 +37,14 @@
   - [`train_function_template/`](lightgbm/train_function_template/) — 训练/预测函数模板,参数字典抽离
   - [`quant_pipeline_basics/`](lightgbm/quant_pipeline_basics/) — 量化最小可跑流水线 (qlib 简化版):打标签 / 写特征 / 训练 + IC 评估
   - [`double_ensemble/`](lightgbm/double_ensemble/) — DoubleEnsemble (ICDM 2020):样本重加权 (SR) + 特征选择 (FS) 治样本噪声
+  - [`demo_full_pipeline.py`](lightgbm/demo_full_pipeline.py) / [`demo_walk_forward.py`](lightgbm/demo_walk_forward.py) — 组合示例:把上面三个子文件夹的方法接成完整训练+评估流水线,细节看 [`lightgbm/README.md`](lightgbm/README.md)
 - **backtest/**
   - [`event_driven_loop/`](backtest/event_driven_loop/) — 事件驱动回测心跳 (zipline-reloaded 简化版):mark-to-market + rebalance
 - **evaluation/**
   - [`risk_metrics/`](evaluation/risk_metrics/) — 业绩 / 风险指标 (empyrical-reloaded 简化版):年化收益 / 波动 / 夏普 / 最大回撤 / Calmar / Sortino
   - [`alphalens_basics/`](evaluation/alphalens_basics/) — 因子诊断核心 (Alphalens 简化版):IC / IR / 分位单调性 / 换手
   - [`concept_drift_ddgda/`](evaluation/concept_drift_ddgda/) — 概念漂移下的样本时间加权 (DDG-DA 简化版):walk-forward + 指数衰减权重
+  - [`walk_forward_validation/`](evaluation/walk_forward_validation/) — Walk-forward validation (aka forward validation / forward chaining):模型无关的滚动训练-测试协议 + label 打乱的信号/噪音显著性检验
 - **qlib/** — 微软 Qlib 源码与机制阅读笔记
   - [`data_flow_concepts/`](qlib/data_flow_concepts/) — 整体架构与数据流向:Data Handler → Model → Strategy → Backtest
   - [`factor_engine/`](qlib/factor_engine/) — 因子引擎概览:表达式引擎 (Formulaic Alpha)、动态过滤、多级缓存

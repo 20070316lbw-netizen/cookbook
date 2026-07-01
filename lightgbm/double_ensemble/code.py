@@ -88,7 +88,10 @@ def sample_reweight(
     # 分箱, 同箱共享同一个 1/(decay^k * h_avg + 0.1) 权重
     h["bins"] = pd.cut(h["h_value"], bins)
     h_avg = h.groupby("bins", group_keys=False, observed=False)["h_value"].mean()
-    weights = pd.Series(np.zeros(N, dtype=float))
+    # index 跟 h 对齐 (而不是默认 RangeIndex): loss_values/loss_curve 如果带的是
+    # MultiIndex (量化里的 (datetime, instrument) 惯例), 下面的布尔索引赋值
+    # 要求两边 index 能对上, 否则会报 "Unalignable boolean Series" 。
+    weights = pd.Series(np.zeros(N, dtype=float), index=h.index)
     for b in h_avg.index:
         weights[h["bins"] == b] = 1.0 / (decay**k_th * h_avg[b] + 0.1)
     return weights
@@ -175,7 +178,10 @@ def retrieve_loss_curve(model: lgb.Booster, X: pd.DataFrame, y: np.ndarray) -> p
     for t in range(num_trees):
         pred_cum += model.predict(X_values, start_iteration=t, num_iteration=1)
         curve[:, t] = (y - pred_cum) ** 2
-    return pd.DataFrame(curve)
+    # index=X.index: 不带索引的话下游 sample_reweight 里跟带 MultiIndex 的
+    # loss_values 做 h1+h2 时会因为 index 对不上直接报错 (两边"看似等长"但
+    # join 不到一起), 只有 X 恰好是默认 0..N-1 RangeIndex 时才会侥幸不报错。
+    return pd.DataFrame(curve, index=X.index)
 
 
 # =====================================================================
